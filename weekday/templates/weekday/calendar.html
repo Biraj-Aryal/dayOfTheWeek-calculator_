@@ -1,0 +1,249 @@
+{% load static %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gregorian Week Day</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    <style>
+        .styled-text {
+        font-family: Arial, sans-serif;
+        font-size: 16px;
+        color: #333;
+        background-color: #f5f5f5;
+        padding: 10px;
+        border: 1px solid #ccc;
+        }
+
+        .result-text {
+        font-size: 30px; /* Adjust the font size as needed */
+        font-family: cursive;
+        width: 50%;
+        display: block;
+        }
+
+        .emphasized-text {
+        padding-bottom: 0;
+        }
+
+        .styled-text a[data-toggle="tooltip"] {
+        text-decoration: none;
+        }
+    </style>
+
+    <!-- This is to fix days selection tool to take the year and month into account-->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      $(document).ready(function() {
+        // Get the month and day fields
+        var monthField = $('#id_month');
+        var dayField = $('#id_day');
+        var yearField = $('#id_year');
+
+        // Function to update the day options based on the selected month and year
+        function updateDayOptions() {
+          // Get the selected month and year
+          var selectedMonth = parseInt(monthField.val());
+          var selectedYear = parseInt(yearField.val());
+
+          // Clear existing day options
+          dayField.empty();
+
+          // Get the maximum number of days for the selected month and year
+          var maxDays;
+          if (selectedMonth === 2) {
+            // Check if the selected year is a leap year
+            if ((selectedYear % 4 === 0 && selectedYear % 100 !== 0) || selectedYear % 400 === 0) {
+              maxDays = 29; // Leap year, so February has 29 days
+            } else {
+              maxDays = 28; // Non-leap year, so February has 28 days
+            }
+          } else {
+            maxDays = new Date(selectedYear, selectedMonth, 0).getDate();
+          }
+
+          // Generate new day options
+          for (var i = 1; i <= maxDays; i++) {
+            dayField.append($('<option></option>').attr('value', i).text(i));
+          }
+        }
+
+        // Update day options when the month or year field is changed
+        monthField.on('change', function() {
+          updateDayOptions();
+        });
+
+        yearField.on('change', function() {
+          updateDayOptions();
+        });
+
+        // Update day options initially
+        updateDayOptions();
+
+        // Retrieve and set the day value from localStorage, if available
+        var storedDay = localStorage.getItem('day');
+        if (storedDay) {
+          dayField.val(storedDay);
+        }
+      });
+
+      // Store the day value in localStorage when the form is submitted
+      function storeDayValue() {
+        var dayField = $('#id_day');
+        var dayValue = dayField.val();
+        localStorage.setItem('day', dayValue);
+        return true;  // Allow form submission
+      }
+    </script>
+
+
+</head>
+<body>
+  
+    <div class="container-sm">
+        <br>
+
+        <div class="text-center alert alert-primary">
+            <a href="{% url 'gregorian_calendar' %}">Day-Of-The-Week Calculator</a>
+        </div>
+
+        <form method="post" onsubmit="return validateYear() && storeDayValue()">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="{{ form.year.id_for_label }}">Year</label>
+                {{ form.year }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.month.id_for_label }}">Month</label>
+                {{ form.month }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.day.id_for_label }}">Day</label>
+                {{ form.day }}
+            </div>
+        <br>
+
+        <div class="row">
+            <div class="col-auto">
+              <button type="submit" class="btn btn-primary">Submit</button>
+            </div>
+            <div class="col text-center">
+                <h5 class="text-md-left result-text" style="width: 100%; display: block;">{{ result }}</h5>
+            </div>
+        </div>
+
+        </form>
+        <script>
+          function validateYear() {
+              var yearInput = document.getElementById("id_year").value;
+              if (yearInput === "0" || yearInput === "00" || yearInput === "000" || yearInput === "0000") {
+                  alert("Enter a valid year.");
+                  return false;  // Prevent form submission
+              }
+              return true;  // Allow form submission
+          }
+      </script>
+
+        <!-- <div>
+
+        </div> -->
+        <div class="styled-text">
+        <h4 style="text-align: center;">Calculation using odd day method</h4>
+
+            {{ year_statement|safe }}
+            <br>
+            {{ year_calculation1|safe }}
+            <br>
+            {{ year_calculation2|safe }}
+            <br>
+            <br>
+            {{ month_statement|safe }}
+            <br>
+            <div id="month-calculation-table"></div>
+            <br>
+            {{ day_statement|safe }}
+            <br>
+            <br>
+            {{ answer_calculation|safe }}
+            <br>
+            <div class="text-center mb-0 emphasized-text"><strong>{{ final_answer|safe }}</strong></div>
+
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+
+    <script>
+      function createTableFromDict(dict) {
+        var table = document.createElement('table');
+        var thead = document.createElement('thead');
+        var tbody = document.createElement('tbody');
+
+        // Create table headers
+        var headerRow = document.createElement('tr');
+        var keys = Object.keys(dict);
+        for (var i = 0; i < keys.length; i++) {
+          var th = document.createElement('th');
+          th.textContent = keys[i];
+          headerRow.appendChild(th);
+        }
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        // Create table rows
+        var valueRow = document.createElement('tr');
+        for (var i = 0; i < keys.length; i++) {
+          var td = document.createElement('td');
+          td.textContent = dict[keys[i]];
+          valueRow.appendChild(td);
+        }
+        tbody.appendChild(valueRow);
+        table.appendChild(tbody);
+
+        // Add CSS styles for table layout and cell borders
+        table.style.borderCollapse = 'collapse';
+        table.style.width = '100%';
+        table.style.border = '1px solid #ddd';
+        table.style.textAlign = 'center';
+
+        var cells = table.getElementsByTagName('td');
+        for (var i = 0; i < cells.length; i++) {
+          cells[i].style.padding = '10px'; // Adjust the padding value as needed
+          cells[i].style.border = '1px solid #ddd';
+        }
+
+        return table;
+      }
+
+      // Retrieve the dictionary object from the month_calculation variable
+      var monthCalculation = {{ month_calculation|safe }};
+
+      // Create the table and append it to the specified div
+      var tableContainer = document.getElementById('month-calculation-table');
+      var table = createTableFromDict(monthCalculation);
+      tableContainer.appendChild(table);
+
+      // Add CSS styles to center the table
+      tableContainer.style.display = 'flex';
+      tableContainer.style.justifyContent = 'center';
+      tableContainer.style.alignItems = 'center';
+
+
+      $(document).ready(function(){
+        $('.styled-text a[data-toggle="tooltip"]').tooltip();
+      });
+    </script>
+
+
+</body>
+</html>
+
+{% endblock %}
